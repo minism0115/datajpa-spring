@@ -9,6 +9,12 @@ import javax.persistence.*;
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString(of = {"id", "username", "age"})
+// 실무에서는 잘 안 써!
+// 장점: 어플리케이션 로딩 시점에 쿼리 파싱하며 오류 체크
+@NamedQuery(
+        name = "Member.findByUsername",
+        query = "select m from Member m where m.username = :username"
+)
 public class Member {
 
     @Id
@@ -28,6 +34,11 @@ public class Member {
         if(team != null){
             changeTeam(team);
         }
+    }
+
+    public Member(String username, int age) {
+        this.username = username;
+        this.age = age;
     }
 
     public void changeTeam(Team team){
