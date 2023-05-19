@@ -12,6 +12,8 @@ import study.datajpa.dto.MemberDto;
 import study.datajpa.entity.Member;
 import study.datajpa.entity.Team;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 import java.util.Arrays;
 import java.util.List;
 
@@ -24,6 +26,8 @@ class MemberRepositoryTest {
 
     @Autowired MemberRepository memberRepository;
     @Autowired TeamRepository teamRepository;
+    @PersistenceContext
+    EntityManager em;
 
     @Test
     public void testMember(){
@@ -184,5 +188,74 @@ class MemberRepositoryTest {
         assertThat(page.getTotalPages()).isEqualTo(2);
         assertThat(page.isFirst()).isTrue();
         assertThat(page.hasNext()).isTrue();
+    }
+
+    @Test
+    public void bulkUpdate() throws Exception {
+        //given
+        memberRepository.save(new Member("member1", 10));
+        memberRepository.save(new Member("member2", 19));
+        memberRepository.save(new Member("member3", 20));
+        memberRepository.save(new Member("member4", 21));
+        memberRepository.save(new Member("member5", 40));
+
+        //when
+        int resultCount = memberRepository.bulkAgePlus(20);
+//        em.flush(); // 변경사항 적용
+//        em.clear(); // 영속성 컨택스트에 있는 내용 다 날려버림
+
+        // 벌크 업데이트는 영속성 컨택스트를 무시하고 바로 DB값 변경
+        List<Member> members = memberRepository.findByUsername("member5");
+        Member member5 = members.get(0);
+        System.out.println("member5 = " + member5); // age 41이 아니라 40
+
+        //then
+        assertThat(resultCount).isEqualTo(3);
+    }
+
+    @Test
+    public void findMemberLazy(){
+        // given
+        // member1 -> teamA
+        // member2 -> teatB
+
+        Team teamA = new Team("teamA");
+        Team teamB = new Team("teamB");
+        teamRepository.save(teamA);
+        teamRepository.save(teamB);
+        Member member1 = new Member("member1", 10, teamA);
+        Member member2 = new Member("member2", 10, teamB);
+        memberRepository.save(member1);
+        memberRepository.save(member2);
+
+        em.flush();
+        em.clear();
+
+        // when
+        List<Member> members = memberRepository.findAll();
+        List<Member> memberFetchJoin = memberRepository.findMemberFetchJoin();
+
+        for (Member member : members) {
+            System.out.println("member: " + member.getUsername());
+            System.out.println("member.teamClass: " + member.getTeam().getClass());
+            System.out.println("member.team: " + member.getTeam().getName());
+        }
+    }
+
+    @Test
+    public void queryHint(){
+        // given
+        Member member1 = new Member(("member1", 10);
+        memberRepository.save(member1));
+        em.flush();
+        em.clear();
+
+        // when
+        Member findMember = memberRepository.findById(member1.getId()).get();
+        // 더티 체킹이 일어난다는 것 자체가 이전 값을 가지고 있다는 의미 -> 비용 발생
+        // 정말 조회용으로만 쓸 거라면,
+//        findMember.setUsername("member2");
+
+        em.flush();
     }
 }
