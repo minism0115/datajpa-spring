@@ -1,11 +1,13 @@
 package study.datajpa.repository;
 
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.transaction.annotation.Transactional;
 import study.datajpa.dto.MemberDto;
@@ -243,12 +245,12 @@ class MemberRepositoryTest {
     }
 
     @Test
-    public void queryHint(){
+    public void queryHint(){ // hibernate에 주는 힌트야
         // given
-        Member member1 = new Member(("member1", 10);
-        memberRepository.save(member1));
-        em.flush();
-        em.clear();
+        Member member1 = new Member("member1", 10);
+        memberRepository.save(member1);
+        em.flush(); // DB에 결과 넘기고 남아 있어
+        em.clear(); // 영속성 컨텍스트 날아가
 
         // when
         Member findMember = memberRepository.findById(member1.getId()).get();
@@ -256,6 +258,49 @@ class MemberRepositoryTest {
         // 정말 조회용으로만 쓸 거라면,
 //        findMember.setUsername("member2");
 
+        Member findMemberByQueryHint = memberRepository.findReadOnlyByUsername("member1" );
+        findMemberByQueryHint.setUsername("member2"); // findMemberByQueryHint는 변경 감지를 안 하기 때문에 변경 안 됨
+
         em.flush();
+    }
+
+    @Test
+    public void lock(){
+        // given
+        Member member1 = new Member("member1", 10);
+        memberRepository.save(member1);
+        em.flush(); // DB에 결과 넘기고 남아 있어
+        em.clear(); // 영속성 컨텍스트 날아가
+
+        // when
+        List<Member> result = memberRepository.findLockByUsername("member1" );
+    }
+
+    @Test
+    public void callCustom(){
+        List<Member> result = memberRepository.findMemberCustom();
+    }
+
+    @Test
+    public void specBasic(){
+        // given
+        Team teamA = new Team("teamA" );
+        em.persist(teamA);
+
+        Member m1 = new Member("m1", 0, teamA);
+        Member m2 = new Member("m2", 0, teamA);
+        em.persist(m1);
+        em.persist(m2);
+
+        em.flush();
+        em.clear();
+
+        // when
+        Specification<Member> spec = MemberSpec.username("m1" ).and(MemberSpec.teamName("teamA" ));
+        List<Member> result = memberRepository.findAll(spec);
+
+        // then
+        Assertions.assertThat(result.size()).isEqualTo(1);
+
     }
 }

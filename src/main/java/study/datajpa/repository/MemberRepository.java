@@ -2,19 +2,18 @@ package study.datajpa.repository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import study.datajpa.dto.MemberDto;
 import study.datajpa.entity.Member;
 
+import javax.persistence.LockModeType;
+import javax.persistence.QueryHint;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface MemberRepository extends JpaRepository<Member, Long> {
+public interface MemberRepository extends JpaRepository<Member, Long>, MemberRepositoryCustom, JpaSpecificationExecutor<Member> {
     List<Member> findByUsernameAndAgeGreaterThan(String username, int age);
 
     @Query(name = "Member.findByUsername") // 이 부분을 주석처리 하더라도 정상 동작!
@@ -49,7 +48,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     @Query("update Member m set m.age = m.age + 1 where m.age >= :age")
     int bulkAgePlus(@Param("age") int age);
 
-    @Query("select m from Member left join fetch m.team")
+    @Query("select m from Member m left join fetch m.team")
     List<Member> findMemberFetchJoin();
 
     @Override
@@ -57,11 +56,16 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     List<Member> findAll();
 
     @EntityGraph(attributePaths = {"team"})
-    @Query("select m from Member")
+    @Query("select m from Member m")
     List<Member> findMemberEntityGraph();
 
     @EntityGraph(attributePaths = {"team"})
 //    @EntityGraph("Member.all") // NamedEntityGraph 사용
     List<Member> findEntityGraphByUsername(@Param("username") String username);
 
+    @QueryHints(value = @QueryHint(name = "org.hibernate.readOnly", value = "true"))
+    Member findReadOnlyByUsername(String username);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE) // JPA 꺼야
+    List<Member> findLockByUsername(String username);
 }

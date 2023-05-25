@@ -16,7 +16,7 @@ import javax.persistence.*;
         query = "select m from Member m where m.username = :username"
 )
 @NamedEntityGraph(name = "Member.all", attributeNodes = @NamedAttributeNode(("team"))) // JPA 표준 스펙
-public class Member {
+public class Member extends BaseEntity {
 
     @Id
     @GeneratedValue
